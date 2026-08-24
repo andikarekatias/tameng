@@ -1,7 +1,26 @@
 # Changelog
 
-All notable changes to `:package_name` will be documented in this file.
+All notable changes to `andika/tameng` will be documented in this file.
 
-## 1.0.0 - 202X-XX-XX
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-- initial release
+## [1.0.0] — Public Release - 2026-24-08
+
+> First stable release of Tameng — a Filament 5 plugin for role & permission management built on top of [spatie/laravel-permission](https://github.com/spatie/laravel-permission).
+
+### Features
+
+- 🛡️ **Role Management** — manage roles and permissions from a single page with embedded permission cards
+    - 📦 Resource Permissions
+    - 📄 Page Permissions
+    - 🧩 Widget Permissions
+    - ✨ Custom Permissions
+- 🤖 **Automatic Permission Generation** — scans panels and creates permissions by convention
+    - 📜 Policy generation from publishable stubs
+    - 🏷️ Configurable case formatting (snake, kebab, pascal, camel, upper_snake)
+    - 🔗 Entity discovery across all panels
+- 👑 **Super Admin Bypass** — users with the configured role skip all authorization checks
+- 🔄 **Multi-tenancy Support** — automatic tenant scoping with spatie teams + Filament panel tenancy
+- 🎨 **Intuitive UI** — Shield-inspired card grid layout with icons per entity type
+- ⚡ **Fine-grained CLI Tooling** — install, generate, and super-admin commands
