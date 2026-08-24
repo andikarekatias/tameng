@@ -35,8 +35,8 @@ final class PermissionHelper
 
     public static function permissionName(string $entity, string $action, string $separator, string $case): string
     {
-        $entitySegment = static::formatSegment($entity, $case);
-        $actionSegment = static::formatSegment($action, $case);
+        $entitySegment = self::formatSegment($entity, $case);
+        $actionSegment = self::formatSegment($action, $case);
 
         return "{$entitySegment}{$separator}{$actionSegment}";
     }

@@ -41,7 +41,8 @@ it('does not overwrite existing policies without force', function () {
 });
 
 it('bypasses authorization checks for the super admin role', function () {
-    config(['tameng.super_admin.enabled' => true]); config(['tameng.super_admin.enabled' => true]);
+    config(['tameng.super_admin.enabled' => true]);
+    config(['tameng.super_admin.enabled' => true]);
     Role::findOrCreate(config('tameng.super_admin.name'));
 
     $user = User::create([
@@ -72,7 +73,8 @@ it('does not crash when authorization is checked for a guest', function () {
 });
 
 it('uses the panel plugin super admin role override', function () {
-    config(['tameng.super_admin.enabled' => true]); config(['tameng.super_admin.enabled' => true]);
+    config(['tameng.super_admin.enabled' => true]);
+    config(['tameng.super_admin.enabled' => true]);
     TamengPlugin::get()->superAdminRole('root');
 
     Role::findOrCreate('root');

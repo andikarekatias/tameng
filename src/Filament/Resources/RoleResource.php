@@ -13,11 +13,12 @@ use BackedEnum;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Facades\Filament;
-use Filament\Panel;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Pages\Dashboard;
+use Filament\Panel;
+use Filament\Resources\Pages\Page as ResourcePage;
 use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Component as SchemaComponent;
@@ -27,7 +28,6 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Filament\Resources\Pages\Page as ResourcePage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -285,7 +285,7 @@ class RoleResource extends Resource
         );
     }
 
-    public static function makePermissionCard(string $name, string $label, array $options, Heroicon|string $icon, string $iconColor): Section
+    public static function makePermissionCard(string $name, string $label, array $options, Heroicon | string $icon, string $iconColor): Section
     {
         return Section::make($label)
             ->icon($icon)

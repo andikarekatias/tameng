@@ -7,6 +7,7 @@ namespace Andika\Tameng;
 use Andika\Tameng\Commands\GeneratePermissionsCommand;
 use Andika\Tameng\Commands\InstallCommand;
 use Andika\Tameng\Commands\SuperAdminCommand;
+use Exception;
 use Filament\Support\Assets\Asset;
 use Filament\Support\Facades\FilamentAsset;
 use Filament\Support\Facades\FilamentIcon;
@@ -14,7 +15,6 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Gate;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Exception;
 
 class TamengServiceProvider extends PackageServiceProvider
 {

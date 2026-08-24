@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Andika\Tameng\Commands;
 
+use Andika\Tameng\Filament\Resources\RoleResource;
 use Andika\Tameng\Support\ModelHelper;
 use Andika\Tameng\Support\PermissionHelper;
 use Andika\Tameng\TamengPlugin;
@@ -12,7 +13,6 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\Resources\Pages\Page as ResourcePage;
 use Illuminate\Console\Command;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
 
@@ -71,7 +71,7 @@ class GeneratePermissionsCommand extends Command
             $skipRolePolicy = config('tameng.register_role_policy', true);
 
             foreach ($panel->getResources() as $resource) {
-                if ($skipRolePolicy && $resource === \Andika\Tameng\Filament\Resources\RoleResource::class) {
+                if ($skipRolePolicy && $resource === RoleResource::class) {
                     continue;
                 }
 
