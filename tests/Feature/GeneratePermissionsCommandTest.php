@@ -103,8 +103,6 @@ it('overwrites existing policies with force', function () {
     expect(app('files')->get(app_path('Policies/UserPolicy.php')))->toContain('class UserPolicy');
 });
 
-// --- New tests: shield-config alignment ---
-
 it('excludes Dashboard permission by default', function () {
     $this->artisan('tameng:generate')->assertExitCode(0);
 

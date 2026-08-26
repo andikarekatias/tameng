@@ -9,6 +9,7 @@ use Andika\Tameng\Filament\Resources\RoleResource\Pages\EditRole;
 use Andika\Tameng\Filament\Resources\RoleResource\Pages\ListRoles;
 use Andika\Tameng\Support\ModelHelper;
 use Andika\Tameng\Support\PermissionHelper;
+use Andika\Tameng\TamengPlugin;
 use BackedEnum;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -41,10 +42,6 @@ class RoleResource extends Resource
 
     public const WIDGET_PREFIX = 'widgets_';
 
-    protected static string | UnitEnum | null $navigationGroup = 'Access';
-
-    protected static BackedEnum | string | null $navigationIcon = Heroicon::ShieldCheck;
-
     public static function getModel(): string
     {
         return ModelHelper::roleModelClass();
@@ -62,7 +59,38 @@ class RoleResource extends Resource
 
     public static function getNavigationLabel(): string
     {
-        return 'Tameng';
+        try {
+            return TamengPlugin::get()->getNavigationLabel();
+        } catch (\Throwable) {
+            return (string) config('tameng.navigation.label', 'Tameng');
+        }
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        try {
+            return TamengPlugin::get()->getNavigationGroup();
+        } catch (\Throwable) {
+            return (string) config('tameng.navigation.group', 'Access');
+        }
+    }
+
+    public static function getNavigationIcon(): BackedEnum|string|null
+    {
+        try {
+            return TamengPlugin::get()->getNavigationIcon();
+        } catch (\Throwable) {
+            return config('tameng.navigation.icon');
+        }
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        try {
+            return TamengPlugin::get()->getNavigationSort();
+        } catch (\Throwable) {
+            return config('tameng.navigation.sort');
+        }
     }
 
     public static function getSlug(?Panel $panel = null): string
@@ -169,14 +197,24 @@ class RoleResource extends Resource
         $subject = (string) config('tameng.resources.subject', 'model');
         $exclude = array_map('strval', (array) config('tameng.resources.exclude', []));
 
-        return collect($panel?->getResources() ?? [])
+        $entities = collect($panel?->getResources() ?? [])
             ->filter(fn (string $resource): bool => ! in_array($resource, $exclude, true))
-            ->mapWithKeys(function (string $resource) use ($subject, $separator, $case, $methods, $guard): array {
-                $entity = PermissionHelper::entityName($resource, $subject);
-                $permissionModel = ModelHelper::permissionModelClass();
+            ->mapWithKeys(fn (string $resource): array => [PermissionHelper::entityName($resource, $subject) => true])
+            ->keys()
+            ->all();
+
+        $allPermissions = collect($entities)
+            ->flatMap(fn (string $entity) => collect($methods)
+                ->map(fn (string $action) => PermissionHelper::permissionName($entity, $action, $separator, $case)))
+            ->all();
+
+        $existingPermissions = static::getExistingPermissions($allPermissions, $guard);
+
+        return collect($entities)
+            ->mapWithKeys(function (string $entity) use ($methods, $separator, $case, $existingPermissions): array {
                 $permissions = collect($methods)
                     ->map(fn (string $action) => PermissionHelper::permissionName($entity, $action, $separator, $case))
-                    ->filter(fn (string $name) => $permissionModel::where('name', $name)->where('guard_name', $guard)->exists())
+                    ->filter(fn (string $name) => in_array($name, $existingPermissions, true))
                     ->mapWithKeys(fn (string $name) => [$name => PermissionHelper::permissionLabel($name)])
                     ->all();
 
@@ -203,15 +241,21 @@ class RoleResource extends Resource
         $subject = (string) config('tameng.pages.subject', 'class');
         $exclude = array_map('strval', (array) config('tameng.pages.exclude', []));
 
+        $allPagePermissions = collect($panel?->getPages() ?? [])
+            ->filter(fn (string $page): bool => ! is_a($page, ResourcePage::class, true) && ! is_a($page, Dashboard::class, true))
+            ->filter(fn (string $page): bool => ! in_array($page, $exclude, true))
+            ->map(fn (string $page) => PermissionHelper::permissionName(PermissionHelper::entityName($page, $subject), 'view', $separator, $case))
+            ->all();
+
+        $existingPermissions = static::getExistingPermissions($allPagePermissions, $guard);
+
         return collect($panel?->getPages() ?? [])
             ->filter(fn (string $page): bool => ! is_a($page, ResourcePage::class, true) && ! is_a($page, Dashboard::class, true))
             ->filter(fn (string $page): bool => ! in_array($page, $exclude, true))
-            ->mapWithKeys(function (string $page) use ($subject, $separator, $case, $guard): array {
-                $entity = PermissionHelper::entityName($page, $subject);
-                $name = PermissionHelper::permissionName($entity, 'view', $separator, $case);
-                $permissionModel = ModelHelper::permissionModelClass();
+            ->mapWithKeys(function (string $page) use ($subject, $separator, $case, $existingPermissions): array {
+                $name = PermissionHelper::permissionName(PermissionHelper::entityName($page, $subject), 'view', $separator, $case);
 
-                return $permissionModel::where('name', $name)->where('guard_name', $guard)->exists()
+                return in_array($name, $existingPermissions, true)
                     ? [$name => PermissionHelper::permissionLabel($name)]
                     : [];
             })
@@ -236,15 +280,21 @@ class RoleResource extends Resource
         $subject = (string) config('tameng.widgets.subject', 'class');
         $exclude = array_map('strval', (array) config('tameng.widgets.exclude', []));
 
+        $allWidgetPermissions = collect($panel?->getWidgets() ?? [])
+            ->map(fn (mixed $widget): string => is_object($widget) ? $widget::class : $widget)
+            ->filter(fn (string $widget): bool => ! in_array($widget, $exclude, true))
+            ->map(fn (string $widget) => PermissionHelper::permissionName(PermissionHelper::entityName($widget, $subject), 'view', $separator, $case))
+            ->all();
+
+        $existingPermissions = static::getExistingPermissions($allWidgetPermissions, $guard);
+
         return collect($panel?->getWidgets() ?? [])
             ->map(fn (mixed $widget): string => is_object($widget) ? $widget::class : $widget)
             ->filter(fn (string $widget): bool => ! in_array($widget, $exclude, true))
-            ->mapWithKeys(function (string $widget) use ($subject, $separator, $case, $guard): array {
-                $entity = PermissionHelper::entityName($widget, $subject);
-                $name = PermissionHelper::permissionName($entity, 'view', $separator, $case);
-                $permissionModel = ModelHelper::permissionModelClass();
+            ->mapWithKeys(function (string $widget) use ($subject, $separator, $case, $existingPermissions): array {
+                $name = PermissionHelper::permissionName(PermissionHelper::entityName($widget, $subject), 'view', $separator, $case);
 
-                return $permissionModel::where('name', $name)->where('guard_name', $guard)->exists()
+                return in_array($name, $existingPermissions, true)
                     ? [$name => PermissionHelper::permissionLabel($name)]
                     : [];
             })
@@ -264,11 +314,12 @@ class RoleResource extends Resource
     {
         $panel = Filament::getCurrentPanel();
         $guard = $panel?->getAuthGuard() ?? config('auth.defaults.guard');
-        $permissionModel = ModelHelper::permissionModelClass();
         $customPermissions = (array) config('tameng.custom_permissions', []);
 
+        $existingPermissions = static::getExistingPermissions($customPermissions, $guard);
+
         $options = collect($customPermissions)
-            ->filter(fn (string $name) => $permissionModel::where('name', $name)->where('guard_name', $guard)->exists())
+            ->filter(fn (string $name) => in_array($name, $existingPermissions, true))
             ->mapWithKeys(fn (string $name) => [$name => PermissionHelper::permissionLabel($name)])
             ->all();
 
@@ -283,6 +334,22 @@ class RoleResource extends Resource
             icon: Heroicon::Wrench,
             iconColor: 'gray',
         );
+    }
+
+    /** @param  array<string>  $permissionNames */
+    protected static function getExistingPermissions(array $permissionNames, string $guard): array
+    {
+        if ($permissionNames === []) {
+            return [];
+        }
+
+        $permissionModel = ModelHelper::permissionModelClass();
+
+        return $permissionModel::query()
+            ->where('guard_name', $guard)
+            ->whereIn('name', $permissionNames)
+            ->pluck('name')
+            ->all();
     }
 
     public static function makePermissionCard(string $name, string $label, array $options, Heroicon | string $icon, string $iconColor): Section

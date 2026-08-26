@@ -1,6 +1,7 @@
 <?php
 
 use Filament\Pages\Dashboard;
+use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
 
@@ -13,6 +14,13 @@ return [
 
     'slug' => 'tameng',
 
+    'navigation' => [
+        'group' => 'Access',
+        'label' => 'Tameng',
+        'icon' => Heroicon::ShieldCheck,
+        'sort' => null,
+    ],
+
     'permission' => [
         'separator' => '_',
         'case' => 'snake',
@@ -20,15 +28,11 @@ return [
         'name_max_length' => 255,
     ],
 
-    'custom_permissions' => [
-        //
-    ],
+    'custom_permissions' => [],
 
     'resources' => [
         'subject' => 'model',
-        'exclude' => [
-            //
-        ],
+        'exclude' => [],
     ],
 
     'pages' => [

@@ -8,9 +8,6 @@ use Andika\Tameng\Commands\GeneratePermissionsCommand;
 use Andika\Tameng\Commands\InstallCommand;
 use Andika\Tameng\Commands\SuperAdminCommand;
 use Exception;
-use Filament\Support\Assets\Asset;
-use Filament\Support\Facades\FilamentAsset;
-use Filament\Support\Facades\FilamentIcon;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Gate;
 use Spatie\LaravelPackageTools\Package;
@@ -37,22 +34,8 @@ class TamengServiceProvider extends PackageServiceProvider
         }
     }
 
-    public function packageRegistered(): void {}
-
     public function packageBooted(): void
     {
-        FilamentAsset::register(
-            $this->getAssets(),
-            $this->getAssetPackageName()
-        );
-
-        FilamentAsset::registerScriptData(
-            $this->getScriptData(),
-            $this->getAssetPackageName()
-        );
-
-        FilamentIcon::register($this->getIcons());
-
         if (app()->runningInConsole()) {
             foreach (app(Filesystem::class)->files(__DIR__ . '/../stubs/') as $file) {
                 $this->publishes([
@@ -91,17 +74,6 @@ class TamengServiceProvider extends PackageServiceProvider
         }
     }
 
-    protected function getAssetPackageName(): ?string
-    {
-        return 'andika/tameng';
-    }
-
-    /** @return array<Asset> */
-    protected function getAssets(): array
-    {
-        return [];
-    }
-
     /** @return array<class-string> */
     protected function getCommands(): array
     {
@@ -110,23 +82,5 @@ class TamengServiceProvider extends PackageServiceProvider
             InstallCommand::class,
             SuperAdminCommand::class,
         ];
-    }
-
-    /** @return array<string> */
-    protected function getIcons(): array
-    {
-        return [];
-    }
-
-    /** @return array<string> */
-    protected function getRoutes(): array
-    {
-        return [];
-    }
-
-    /** @return array<string, mixed> */
-    protected function getScriptData(): array
-    {
-        return [];
     }
 }

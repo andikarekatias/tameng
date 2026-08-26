@@ -17,12 +17,14 @@ final class PermissionHelper
             if (is_a($class, Model::class, true)) {
                 $name = class_basename($class);
             } elseif (method_exists($class, 'getModel')) {
-                /** @var class-string<Model> $permissionModel */
-                $permissionModel = config('permission.models.permission');
-
-                /** @var string $modelClass */
-                $modelClass = (new $class(new $permissionModel))->getModel();
-                $name = class_basename($modelClass);
+                try {
+                    /** @var class-string<Model> $modelClass */
+                    $modelClass = $class::getModel();
+                    $name = class_basename($modelClass);
+                } catch (\Throwable) {
+                    // Fallback to class name without Resource suffix
+                    $name = str_ends_with($name, 'Resource') ? Str::beforeLast($name, 'Resource') : $name;
+                }
             }
         } else {
             $name = str_ends_with($name, 'Resource') ? Str::beforeLast($name, 'Resource') : $name;

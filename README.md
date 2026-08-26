@@ -25,8 +25,8 @@ Tameng adds role & permission management to your Filament panels on top of [spat
 
 ## Requirements
 
-- PHP ^8.2
-- Laravel 11+
+- PHP ^8.3
+- Laravel 12+
 - Filament 5.x (panels)
 - spatie/laravel-permission ^8.0
 
@@ -47,8 +47,8 @@ tameng has been installed!
 Next Steps:
   1. php artisan tameng:generate
      Generate permissions for your Filament panels
-  2. php artisan tameng:super-admin user@email.com
-     Assign super admin to a user
+  2. php artisan tameng:super-admin
+     Assign super admin to a user (interactive)
   3. php artisan permission:cache-reset
      Clear permission cache
 ```
@@ -211,6 +211,29 @@ The URL path for the role management page. Defaults to `tameng` (e.g. `/dashboar
 
 ```php
 'slug' => 'tameng',   // → /dashboard/tameng
+```
+
+#### Navigation
+
+Customize the sidebar navigation item for the role management page:
+
+```php
+'navigation' => [
+    'group' => 'Access',              // sidebar group label
+    'label' => 'Tameng',              // display text in sidebar
+    'icon' => Heroicon::ShieldCheck,  // sidebar icon (Heroicon enum or string)
+    'sort' => null,                   // sort order within group (null = alphabetical)
+],
+```
+
+Per-panel overrides via the plugin API:
+
+```php
+TamengPlugin::make()
+    ->navigationGroup('Settings')
+    ->navigationLabel('Roles')
+    ->navigationIcon(Heroicon::Key)
+    ->navigationSort(10);
 ```
 
 #### Excludes
