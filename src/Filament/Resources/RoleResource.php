@@ -34,7 +34,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Unique;
 use Spatie\Permission\Contracts\Role as RoleContract;
-use UnitEnum;
 
 class RoleResource extends Resource
 {
@@ -75,7 +74,7 @@ class RoleResource extends Resource
         }
     }
 
-    public static function getNavigationIcon(): BackedEnum|string|null
+    public static function getNavigationIcon(): BackedEnum | string | null
     {
         try {
             return TamengPlugin::get()->getNavigationIcon();

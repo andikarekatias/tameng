@@ -21,7 +21,7 @@ class TamengPlugin implements Plugin
 
     protected ?string $navigationLabel = null;
 
-    protected BackedEnum|string|null $navigationIcon = null;
+    protected BackedEnum | string | null $navigationIcon = null;
 
     protected ?int $navigationSort = null;
 
@@ -93,7 +93,7 @@ class TamengPlugin implements Plugin
         return $this;
     }
 
-    public function navigationIcon(Heroicon|string|null $icon): static
+    public function navigationIcon(Heroicon | string | null $icon): static
     {
         $this->navigationIcon = $icon;
 
@@ -127,7 +127,7 @@ class TamengPlugin implements Plugin
         return $this->navigationLabel ?? (string) config('tameng.navigation.label', 'Tameng');
     }
 
-    public function getNavigationIcon(): BackedEnum|string|null
+    public function getNavigationIcon(): BackedEnum | string | null
     {
         return $this->navigationIcon ?? config('tameng.navigation.icon', Heroicon::ShieldCheck);
     }
