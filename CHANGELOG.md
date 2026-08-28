@@ -49,14 +49,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Features
 
 - 🛡️ **Role Management** — manage roles and permissions from a single page with embedded permission cards
-    - 📦 Resource Permissions
-    - 📄 Page Permissions
-    - 🧩 Widget Permissions
-    - ✨ Custom Permissions
+  - 📦 Resource Permissions
+  - 📄 Page Permissions
+  - 🧩 Widget Permissions
+  - ✨ Custom Permissions
+  
 - 🤖 **Automatic Permission Generation** — scans panels and creates permissions by convention
-    - 📜 Policy generation from publishable stubs
-    - 🏷️ Configurable case formatting (snake, kebab, pascal, camel, upper_snake)
-    - 🔗 Entity discovery across all panels
+  - 📜 Policy generation from publishable stubs
+  - 🏷️ Configurable case formatting (snake, kebab, pascal, camel, upper_snake)
+  - 🔗 Entity discovery across all panels
+  
 - 👑 **Super Admin Bypass** — users with the configured role skip all authorization checks
 - 🔄 **Multi-tenancy Support** — automatic tenant scoping with spatie teams + Filament panel tenancy
 - 🎨 **Intuitive UI** — Shield-inspired card grid layout with icons per entity type
