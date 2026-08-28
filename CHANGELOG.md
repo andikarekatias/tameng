@@ -5,6 +5,10 @@ All notable changes to `andika/tameng` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.2.0 - 2026-08-28
+
+**Full Changelog**: https://github.com/andikarekatias/tameng/compare/1.1.0...1.2.0
+
 ## [1.2.0] — 2026-08-28
 
 ### Added
@@ -49,17 +53,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Features
 
 - 🛡️ **Role Management** — manage roles and permissions from a single page with embedded permission cards
+  
   - 📦 Resource Permissions
   - 📄 Page Permissions
   - 🧩 Widget Permissions
   - ✨ Custom Permissions
   
 - 🤖 **Automatic Permission Generation** — scans panels and creates permissions by convention
+  
   - 📜 Policy generation from publishable stubs
   - 🏷️ Configurable case formatting (snake, kebab, pascal, camel, upper_snake)
   - 🔗 Entity discovery across all panels
   
 - 👑 **Super Admin Bypass** — users with the configured role skip all authorization checks
+  
 - 🔄 **Multi-tenancy Support** — automatic tenant scoping with spatie teams + Filament panel tenancy
+  
 - 🎨 **Intuitive UI** — Shield-inspired card grid layout with icons per entity type
+  
 - ⚡ **Fine-grained CLI Tooling** — install, generate, and super-admin commands
+  
