@@ -56,6 +56,7 @@ class GeneratePermissionsCommand extends Command
             }
 
             $guard = $panel->getAuthGuard();
+            $userModel = $this->resolveUserModel($guard);
 
             if ($generatePermissions) {
                 $this->generateResourcePermissions($panel, $permissionModel, $separator, $case, $methods, $guard);
@@ -75,13 +76,13 @@ class GeneratePermissionsCommand extends Command
                     continue;
                 }
 
-                if ($this->writePolicy($resource, $separator, $case, $methods, $files)) {
+                if ($this->writePolicy($resource, $separator, $case, $methods, $files, $userModel)) {
                     $policiesWritten++;
                 }
             }
 
             if (config('tameng.register_role_policy', true)) {
-                $this->writeRolePolicy($separator, $case, $methods, $files);
+                $this->writeRolePolicy($separator, $case, $methods, $files, $userModel);
             }
         }
 
@@ -188,7 +189,7 @@ class GeneratePermissionsCommand extends Command
         return $created;
     }
 
-    protected function writePolicy(string $resource, string $separator, string $case, array $methods, Filesystem $files): bool
+    protected function writePolicy(string $resource, string $separator, string $case, array $methods, Filesystem $files, ?string $userModel = null): bool
     {
         $entity = PermissionHelper::entityName($resource, (string) config('tameng.resources.subject', 'model'));
         $className = Str::studly($entity) . 'Policy';
@@ -202,12 +203,20 @@ class GeneratePermissionsCommand extends Command
 
         $namespace = rtrim((string) config('tameng.policies.namespace', 'App\\Policies'), '\\');
         $singleParamMethods = (array) config('tameng.policies.single_parameter_methods', []);
+        $resourceModel = PermissionHelper::resolveModelClass($resource);
+
+        $userType = ($userModel !== null && class_exists($userModel)) ? class_basename($userModel) : null;
+        $modelType = ($resourceModel !== null && class_exists($resourceModel)) ? class_basename($resourceModel) : null;
 
         $methodsContent = collect($methods)
-            ->map(function (string $action) use ($entity, $separator, $case, $singleParamMethods): string {
+            ->map(function (string $action) use ($entity, $separator, $case, $singleParamMethods, $userType, $modelType): string {
                 $method = Str::camel($action);
                 $permission = addslashes(PermissionHelper::permissionName($entity, $action, $separator, $case));
-                $param = in_array($action, $singleParamMethods, true) ? '$user' : '$user, $model';
+                $isSingleParam = in_array($action, $singleParamMethods, true);
+
+                $userParam = $userType !== null ? "{$userType} \$user" : '$user';
+                $modelParam = $modelType !== null ? "{$modelType} \$model" : '$model';
+                $param = $isSingleParam ? $userParam : "{$userParam}, {$modelParam}";
 
                 return <<<PHP
                         public function {$method}({$param}): bool
@@ -218,9 +227,11 @@ class GeneratePermissionsCommand extends Command
             })
             ->implode("\n\n");
 
+        $imports = $this->buildImports($namespace, array_filter([$userModel, $resourceModel]));
+
         $stub = Str::replace(
-            ['{namespace}', '{class}', '{methods}'],
-            [$namespace, $className, $methodsContent],
+            ['{namespace}', '{class}', '{imports}', '{methods}'],
+            [$namespace, $className, $imports, $methodsContent],
             $files->get($this->policyStubPath()),
         );
 
@@ -232,7 +243,7 @@ class GeneratePermissionsCommand extends Command
         return true;
     }
 
-    protected function writeRolePolicy(string $separator, string $case, array $methods, Filesystem $files): void
+    protected function writeRolePolicy(string $separator, string $case, array $methods, Filesystem $files, ?string $userModel = null): void
     {
         $className = 'RolePolicy';
         $path = config('tameng.policies.path', app_path('Policies')) . '/' . $className . '.php';
@@ -246,12 +257,20 @@ class GeneratePermissionsCommand extends Command
         $namespace = rtrim((string) config('tameng.policies.namespace', 'App\\Policies'), '\\');
         $singleParamMethods = (array) config('tameng.policies.single_parameter_methods', []);
         $entity = 'role';
+        $roleModel = ModelHelper::roleModelClass();
+
+        $userType = ($userModel !== null && class_exists($userModel)) ? class_basename($userModel) : null;
+        $modelType = class_exists($roleModel) ? class_basename($roleModel) : null;
 
         $methodsContent = collect($methods)
-            ->map(function (string $action) use ($entity, $separator, $case, $singleParamMethods): string {
+            ->map(function (string $action) use ($entity, $separator, $case, $singleParamMethods, $userType, $modelType): string {
                 $method = Str::camel($action);
                 $permission = addslashes(PermissionHelper::permissionName($entity, $action, $separator, $case));
-                $param = in_array($action, $singleParamMethods, true) ? '$user' : '$user, $model';
+                $isSingleParam = in_array($action, $singleParamMethods, true);
+
+                $userParam = $userType !== null ? "{$userType} \$user" : '$user';
+                $modelParam = $modelType !== null ? "{$modelType} \$model" : '$model';
+                $param = $isSingleParam ? $userParam : "{$userParam}, {$modelParam}";
 
                 return <<<PHP
                         public function {$method}({$param}): bool
@@ -262,9 +281,11 @@ class GeneratePermissionsCommand extends Command
             })
             ->implode("\n\n");
 
+        $imports = $this->buildImports($namespace, array_filter([$userModel, $roleModel]));
+
         $stub = Str::replace(
-            ['{namespace}', '{class}', '{methods}'],
-            [$namespace, $className, $methodsContent],
+            ['{namespace}', '{class}', '{imports}', '{methods}'],
+            [$namespace, $className, $imports, $methodsContent],
             $files->get($this->policyStubPath()),
         );
 
@@ -272,6 +293,36 @@ class GeneratePermissionsCommand extends Command
         $files->put($path, $stub);
 
         $this->components->twoColumnDetail($className, '<fg=green>written</>');
+    }
+
+    protected function resolveUserModel(string $guard): ?string
+    {
+        $provider = config("auth.guards.{$guard}.provider");
+
+        if ($provider === null) {
+            return null;
+        }
+
+        /** @var class-string<\Illuminate\Database\Eloquent\Model>|null $model */
+        $model = config("auth.providers.{$provider}.model");
+
+        return ($model !== null && class_exists($model)) ? $model : null;
+    }
+
+    protected function buildImports(string $policyNamespace, array $modelClasses): string
+    {
+        if ($modelClasses === []) {
+            return '';
+        }
+
+        $policyNamespace = rtrim($policyNamespace, '\\');
+
+        return collect($modelClasses)
+            ->filter(fn (?string $class): bool => $class !== null && class_exists($class))
+            ->filter(fn (string $class): bool => (string) Str::beforeLast($class, '\\') !== $policyNamespace)
+            ->unique()
+            ->map(fn (string $class): string => "use {$class};")
+            ->implode("\n");
     }
 
     protected function policyStubPath(): string

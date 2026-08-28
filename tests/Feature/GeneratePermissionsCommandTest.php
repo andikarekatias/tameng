@@ -203,7 +203,7 @@ it('respects custom policy methods with replicate', function () {
     $policy = app_path('Policies/UserPolicy.php');
 
     expect(file_get_contents($policy))
-        ->toContain('public function replicate($user, $model): bool');
+        ->toContain('public function replicate(User $user, User $model): bool');
 });
 
 it('uses single parameter methods for policy signatures', function () {
@@ -212,10 +212,11 @@ it('uses single parameter methods for policy signatures', function () {
     $policy = file_get_contents(app_path('Policies/UserPolicy.php'));
 
     expect($policy)
-        ->toContain('public function viewAny($user): bool')
-        ->toContain('public function view($user, $model): bool')
-        ->toContain('public function create($user): bool')
-        ->toContain('public function update($user, $model): bool');
+        ->toContain('use Andika\Tameng\Tests\Fixtures\User;')
+        ->toContain('public function viewAny(User $user): bool')
+        ->toContain('public function view(User $user, User $model): bool')
+        ->toContain('public function create(User $user): bool')
+        ->toContain('public function update(User $user, User $model): bool');
 });
 
 it('writes and registers the role policy', function () {
@@ -226,7 +227,9 @@ it('writes and registers the role policy', function () {
     expect(file_exists($rolePolicy))->toBeTrue()
         ->and(file_get_contents($rolePolicy))
         ->toContain('class RolePolicy')
-        ->toContain("return \$user->can('role_view_any');");
+        ->toContain("return \$user->can('role_view_any');")
+        ->toContain('public function viewAny(User $user): bool')
+        ->toContain('public function view(User $user, Role $model): bool');
 
     Role::findOrCreate(config('tameng.super_admin.name'));
 

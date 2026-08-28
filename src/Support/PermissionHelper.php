@@ -21,9 +21,8 @@ final class PermissionHelper
                     /** @var class-string<Model> $modelClass */
                     $modelClass = $class::getModel();
                     $name = class_basename($modelClass);
-                } catch (\Throwable) {
-                    // Fallback to class name without Resource suffix
-                    $name = str_ends_with($name, 'Resource') ? Str::beforeLast($name, 'Resource') : $name;
+            } catch (\Throwable) {
+                $name = str_ends_with($name, 'Resource') ? Str::beforeLast($name, 'Resource') : $name;
                 }
             }
         } else {
@@ -53,6 +52,22 @@ final class PermissionHelper
             'lower_snake' => Str::snake($value),
             default => Str::snake($value),
         };
+    }
+
+    public static function resolveModelClass(string $resourceClass): ?string
+    {
+        if (method_exists($resourceClass, 'getModel')) {
+            try {
+                /** @var class-string<\Illuminate\Database\Eloquent\Model> $model */
+                $model = $resourceClass::getModel();
+
+                return class_exists($model) ? $model : null;
+            } catch (\Throwable) {
+                return null;
+            }
+        }
+
+        return null;
     }
 
     public static function permissionLabel(string $name): string
