@@ -21,8 +21,8 @@ final class PermissionHelper
                     /** @var class-string<Model> $modelClass */
                     $modelClass = $class::getModel();
                     $name = class_basename($modelClass);
-            } catch (\Throwable) {
-                $name = str_ends_with($name, 'Resource') ? Str::beforeLast($name, 'Resource') : $name;
+                } catch (\Throwable) {
+                    $name = str_ends_with($name, 'Resource') ? Str::beforeLast($name, 'Resource') : $name;
                 }
             }
         } else {
@@ -58,7 +58,7 @@ final class PermissionHelper
     {
         if (method_exists($resourceClass, 'getModel')) {
             try {
-                /** @var class-string<\Illuminate\Database\Eloquent\Model> $model */
+                /** @var class-string<Model> $model */
                 $model = $resourceClass::getModel();
 
                 return class_exists($model) ? $model : null;

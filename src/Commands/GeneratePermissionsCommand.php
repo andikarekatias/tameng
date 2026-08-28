@@ -13,6 +13,7 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\Resources\Pages\Page as ResourcePage;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
 
@@ -303,7 +304,7 @@ class GeneratePermissionsCommand extends Command
             return null;
         }
 
-        /** @var class-string<\Illuminate\Database\Eloquent\Model>|null $model */
+        /** @var class-string<Model>|null $model */
         $model = config("auth.providers.{$provider}.model");
 
         return ($model !== null && class_exists($model)) ? $model : null;
