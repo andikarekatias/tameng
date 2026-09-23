@@ -10,6 +10,10 @@ it('registers the tameng:install command', function () {
 it('skips migration publish when permissions table exists', function () {
     expect(Schema::hasTable('permissions'))->toBeTrue();
 
+    if (! file_exists(config_path('tameng.php'))) {
+        Artisan::call('vendor:publish', ['--tag' => 'tameng-config', '--force' => true]);
+    }
+
     $this->artisan('tameng:install')
         ->expectsOutputToContain('Table [permissions] already exists. Skipping migration publish.')
         ->expectsConfirmation('Config [tameng.php] already exists. Overwrite?', 'yes')
