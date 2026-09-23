@@ -199,7 +199,7 @@ class SuperAdminCommand extends Command
     /** @param  class-string<Model>  $model */
     protected function createUser(string $model): Model
     {
-        return $model::query()->create([
+        return $model::query()->forceCreate([
             'name' => text(label: 'Name', required: true),
             'email' => text(
                 label: 'Email address',
@@ -217,6 +217,7 @@ class SuperAdminCommand extends Command
                     ? 'The password must be at least 12 characters.'
                     : null,
             )),
+            'email_verified_at' => now(),
         ]);
     }
 

@@ -4,6 +4,18 @@ namespace {namespace};
 
 {imports}
 
+/**
+ * @method bool viewAny(User $user)
+ * @method bool view(User $user, \Illuminate\Database\Eloquent\Model $model)
+ * @method bool create(User $user)
+ * @method bool update(User $user, \Illuminate\Database\Eloquent\Model $model)
+ * @method bool delete(User $user, \Illuminate\Database\Eloquent\Model $model)
+ * @method bool deleteAny(User $user)
+ * @method bool restore(User $user, \Illuminate\Database\Eloquent\Model $model)
+ * @method bool restoreAny(User $user)
+ * @method bool forceDelete(User $user, \Illuminate\Database\Eloquent\Model $model)
+ * @method bool forceDeleteAny(User $user)
+ */
 class {class}
 {
 {methods}

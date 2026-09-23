@@ -243,3 +243,75 @@ it('writes and registers the role policy', function () {
     config(['tameng.super_admin.enabled' => true]);
     expect(Gate::forUser($user->fresh())->check('viewAny', $role))->toBeTrue();
 });
+
+it('generates policies with correct 4-space indentation', function () {
+    $this->artisan('tameng:generate', ['--force' => true])->assertExitCode(0);
+
+    $policy = file_get_contents(app_path('Policies/UserPolicy.php'));
+
+    // Should NOT have 8-space indentation (the old bug)
+    expect($policy)->not->toContain('        public function');
+    // Should have 4-space indentation
+    expect($policy)->toContain('    public function viewAny(User $user): bool');
+});
+
+it('generates ownership-enforced policies with --with-ownership flag', function () {
+    $this->artisan('tameng:generate', ['--force' => true, '--with-ownership' => true])->assertExitCode(0);
+
+    $policy = file_get_contents(app_path('Policies/UserPolicy.php'));
+
+    expect($policy)->toContain('if (! $user->can(\'user_update\'))')
+        ->toContain('$model->user_id === $user->id');
+});
+
+it('generates ownership-enforced policies with config enabled', function () {
+    config(['tameng.policies.ownership.enabled' => true]);
+
+    $this->artisan('tameng:generate', ['--force' => true])->assertExitCode(0);
+
+    $policy = file_get_contents(app_path('Policies/UserPolicy.php'));
+
+    expect($policy)->toContain('if (! $user->can(\'user_update\'))')
+        ->toContain('$model->user_id === $user->id');
+});
+
+it('generates ownership-enforced policies with custom resolver', function () {
+    config([
+        'tameng.policies.ownership.enabled' => true,
+        'tameng.policies.ownership.resolver' => function ($model, $user) {
+            return $model->user_id === $user->id && $user->isActive();
+        },
+    ]);
+
+    $this->artisan('tameng:generate', ['--force' => true])->assertExitCode(0);
+
+    $policy = file_get_contents(app_path('Policies/UserPolicy.php'));
+
+    expect($policy)->toContain('call_user_func(config(\'tameng.policies.ownership.resolver\'), $model, $user)');
+});
+
+it('generates panel-scoped permissions when scoped_to_panel is enabled', function () {
+    config(['tameng.permission.scoped_to_panel' => true]);
+
+    $this->artisan('tameng:generate')->assertExitCode(0);
+
+    expect(config('permission.models.permission')::where('name', 'admin_user_view_any')->exists())->toBeTrue();
+});
+
+it('generates policies with lifecycle hooks when configured', function () {
+    config([
+        'tameng.policies.before' => function ($user, $ability, $model) {
+            return null;
+        },
+        'tameng.policies.after' => function ($user, $ability, $model, $result) {
+            return $result;
+        },
+    ]);
+
+    $this->artisan('tameng:generate', ['--force' => true])->assertExitCode(0);
+
+    $policy = file_get_contents(app_path('Policies/UserPolicy.php'));
+
+    expect($policy)->toContain('call_user_func(config(\'tameng.policies.before\'), $user')
+        ->toContain('call_user_func(config(\'tameng.policies.after\'), $user');
+});

@@ -209,7 +209,7 @@ class RoleResource extends Resource
 
         $existingPermissions = static::getExistingPermissions($allPermissions, $guard);
 
-        return collect($entities)
+        $cards = collect($entities)
             ->mapWithKeys(function (string $entity) use ($methods, $separator, $case, $existingPermissions): array {
                 $permissions = collect($methods)
                     ->map(fn (string $action) => PermissionHelper::permissionName($entity, $action, $separator, $case))
@@ -229,6 +229,12 @@ class RoleResource extends Resource
             ))
             ->values()
             ->all();
+
+        if ($cards === []) {
+            $cards[] = static::makeNoPermissionsCard();
+        }
+
+        return $cards;
     }
 
     public static function getPageCards(): array
@@ -248,7 +254,7 @@ class RoleResource extends Resource
 
         $existingPermissions = static::getExistingPermissions($allPagePermissions, $guard);
 
-        return collect($panel?->getPages() ?? [])
+        $cards = collect($panel?->getPages() ?? [])
             ->filter(fn (string $page): bool => ! is_a($page, ResourcePage::class, true) && ! is_a($page, Dashboard::class, true))
             ->filter(fn (string $page): bool => ! in_array($page, $exclude, true))
             ->mapWithKeys(function (string $page) use ($subject, $separator, $case, $existingPermissions): array {
@@ -268,6 +274,12 @@ class RoleResource extends Resource
             ))
             ->values()
             ->all();
+
+        if ($cards === []) {
+            $cards[] = static::makeNoPermissionsCard();
+        }
+
+        return $cards;
     }
 
     public static function getWidgetCards(): array
@@ -287,7 +299,7 @@ class RoleResource extends Resource
 
         $existingPermissions = static::getExistingPermissions($allWidgetPermissions, $guard);
 
-        return collect($panel?->getWidgets() ?? [])
+        $cards = collect($panel?->getWidgets() ?? [])
             ->map(fn (mixed $widget): string => is_object($widget) ? $widget::class : $widget)
             ->filter(fn (string $widget): bool => ! in_array($widget, $exclude, true))
             ->mapWithKeys(function (string $widget) use ($subject, $separator, $case, $existingPermissions): array {
@@ -307,6 +319,22 @@ class RoleResource extends Resource
             ))
             ->values()
             ->all();
+
+        if ($cards === []) {
+            $cards[] = static::makeNoPermissionsCard();
+        }
+
+        return $cards;
+    }
+
+    protected static function makeNoPermissionsCard(): Section
+    {
+        return Section::make('No permissions found')
+            ->description('Run `php artisan tameng:generate` to generate permissions and policies.')
+            ->icon(Heroicon::InformationCircle)
+            ->iconColor('info')
+            ->compact()
+            ->schema([]);
     }
 
     public static function getCustomCard(): ?Section

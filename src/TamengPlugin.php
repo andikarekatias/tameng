@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Andika\Tameng;
 
 use Andika\Tameng\Filament\Resources\RoleResource;
+use Andika\Tameng\Http\Middleware\EnsurePagePermission;
 use Andika\Tameng\Http\Middleware\SyncTenant;
 use BackedEnum;
 use Filament\Contracts\Plugin;
@@ -35,14 +36,17 @@ class TamengPlugin implements Plugin
         $panel->resources([
             RoleResource::class,
         ]);
-    }
 
-    public function boot(Panel $panel): void
-    {
         if (config('permission.teams')) {
             $panel->tenantMiddleware([SyncTenant::class]);
         }
+
+        if (config('tameng.permission.enforce_page_permissions', true)) {
+            $panel->middleware([EnsurePagePermission::class], isPersistent: true);
+        }
     }
+
+    public function boot(Panel $panel): void {}
 
     public static function make(): static
     {

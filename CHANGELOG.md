@@ -5,6 +5,36 @@ All notable changes to `andika/tameng` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] — 2026-09-23
+
+### Added
+
+- `tameng:sync` — create missing permissions without overwriting existing ones (`--dry-run`, `--panel`)
+- `tameng:check` — report inconsistencies between panel entities and defined permissions/policies
+- Page permission enforcement via `EnsurePagePermission` middleware (`permission.enforce_page_permissions`, default `true`)
+- `HasPermissionCheck` trait for automatic resource `canViewAny()` permission checks
+- Empty-state notice on role cards when no permissions have been generated yet
+- Ownership enforcement in generated policies (`policies.ownership`, `--with-ownership`)
+- Lifecycle hooks (`policies.before` / `policies.after`) on generated policies
+- Multi-panel permission scoping (`permission.scoped_to_panel`)
+- Separator/case validation warning in permission generators
+- README note on re-publishing or merging `config/tameng.php` after package upgrades
+
+### Fixed
+
+- Middleware timing: `EnsurePagePermission` and `SyncTenant` register in `TamengPlugin::register()` (not `boot()`), so they appear on routes before Filament snapshots panel middleware
+- `EnsurePagePermission` resolves Filament page classes from `ClassName@__invoke` route actions via `getControllerClass()` / `uses` fallback
+- Permission names in `EnsurePagePermission` built through `PermissionHelper` (config separator/case) instead of raw slugs
+- `tameng:super-admin` uses `forceCreate()` so non-fillable fields like `email_verified_at` persist
+- Duplicate `User` import in generated/synced policies when no User-class import is present
+- Dead ternaries and unused comments removed from sync/check command paths
+
+### Changed
+
+- Regression tests lock middleware registration to `register()` (route-level `gatherMiddleware()` + `boot()` does not add middleware)
+- PHPStan baseline emptied; analysis clean at configured level
+- Lang file cleaned of commented-out examples and banner comments
+
 ## 1.2.0 - 2026-08-28
 
 **Full Changelog**: https://github.com/andikarekatias/tameng/compare/1.1.0...1.2.0

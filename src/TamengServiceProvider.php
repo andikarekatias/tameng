@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Andika\Tameng;
 
+use Andika\Tameng\Commands\CheckPermissionsCommand;
 use Andika\Tameng\Commands\GeneratePermissionsCommand;
 use Andika\Tameng\Commands\InstallCommand;
 use Andika\Tameng\Commands\SuperAdminCommand;
+use Andika\Tameng\Commands\SyncPermissionsCommand;
 use Exception;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Gate;
@@ -81,6 +83,8 @@ class TamengServiceProvider extends PackageServiceProvider
             GeneratePermissionsCommand::class,
             InstallCommand::class,
             SuperAdminCommand::class,
+            CheckPermissionsCommand::class,
+            SyncPermissionsCommand::class,
         ];
     }
 }

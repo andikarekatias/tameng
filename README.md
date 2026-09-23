@@ -192,6 +192,19 @@ All options live in `config/tameng.php`. Publish it with:
 php artisan vendor:publish --tag="tameng-config"
 ```
 
+> **After upgrading the package:** `vendor:publish` does **not** overwrite an existing `config/tameng.php`. Your published copy keeps missing any option added in the new release, while the package still reads those keys with its own defaults — so behavior can change without a matching line in your config file.
+>
+> Example: v1.1 added `permission.enforce_page_permissions` (default `true`). Apps that published config earlier never got that key; middleware still ran because of the default, which is easy to misread as “middleware is off / not registered.”
+>
+> After each upgrade, either:
+>
+> 1. **Merge manually** (recommended if you customized the file) — open the package’s `vendor/andika/tameng/config/tameng.php`, diff it against yours, and add only the keys you’re missing; or
+> 2. **Re-publish with `--force`** (resets local edits — back up first if you changed anything):
+>
+> ```bash
+> php artisan vendor:publish --tag="tameng-config" --force
+> ```
+
 #### Permission builder
 
 ```php
@@ -200,6 +213,8 @@ php artisan vendor:publish --tag="tameng-config"
     'case' => 'snake',       // snake|kebab|pascal|camel|upper_snake|lower_snake
     'generate' => true,      // false skips permission creation (policies still written)
     'name_max_length' => 255,
+    'scoped_to_panel' => false,
+    'enforce_page_permissions' => true, // registers EnsurePagePermission on panel routes
 ],
 ```
 
@@ -398,6 +413,122 @@ Per-panel overrides via the plugin API:
 TamengPlugin::make()
     ->superAdminRole('super_admin')   // per-panel role name override
     ->entityDiscovery(false);         // disable entity scanning in tameng:generate
+```
+
+### Ownership enforcement
+
+By default, any user with `student_update` can update **any** student record. Enable ownership enforcement to require record ownership:
+
+```php
+'policies' => [
+    'ownership' => [
+        'enabled' => true,
+        'foreign_key' => 'user_id',  // column to check ownership
+        'resolver' => null,          // optional custom closure
+    ],
+],
+```
+
+With ownership enabled, generated policies check both permission and ownership:
+
+```php
+public function update(User $user, Student $model): bool
+{
+    if (! $user->can('student_update')) {
+        return false;
+    }
+
+    return $model->user_id === $user->id;
+}
+```
+
+Or use a custom resolver for complex relationships:
+
+```php
+'ownership' => [
+    'enabled' => true,
+    'resolver' => function ($model, $user) {
+        return $model->user_id === $user->id && $user->isActive();
+    },
+],
+```
+
+Enable ownership via CLI flag:
+
+```bash
+php artisan tameng:generate --with-ownership
+```
+
+### Multi-panel permission scoping
+
+When using multiple Filament panels, enable panel-scoped permissions to prefix permission names with the panel ID:
+
+```php
+'permission' => [
+    'scoped_to_panel' => true,  // admin_post_view ≠ web_post_view
+],
+```
+
+This creates panel-specific permissions like `admin_post_view` and `web_post_view`.
+
+### Lifecycle hooks
+
+Add `before` and `after` callbacks to generated policies for custom logic like audit trails:
+
+```php
+'policies' => [
+    'before' => function ($user, $ability, $model) {
+        // Runs before permission check
+        return null; // Continue to permission check
+    },
+    'after' => function ($user, $ability, $model, $result) {
+        // Runs after permission check
+        return $result;
+    },
+],
+```
+
+### Validating permissions
+
+Check that all permissions are consistent across your panels and policies:
+
+```bash
+php artisan tameng:check
+```
+
+Output:
+
+```
+✓ All permissions are consistent.
+```
+
+Or identify missing permissions:
+
+```
+✗ App\Filament\Resources\PostResource expects permission "post_view_any" — not defined
+```
+
+### Syncing permissions
+
+After adding new resources, sync missing permissions without overwriting existing ones:
+
+```bash
+php artisan tameng:sync --dry-run   # preview what would be created
+php artisan tameng:sync             # create missing permissions
+```
+
+### HasPermissionCheck trait
+
+Use the `HasPermissionCheck` trait on Filament resources to auto-generate `canViewAny()`:
+
+```php
+use Andika\Tameng\Support\Concerns\HasPermissionCheck;
+
+class CategoryResource extends Resource
+{
+    use HasPermissionCheck;
+    // Automatically checks category_view_any permission
+}
 ```
 
 ## Testing

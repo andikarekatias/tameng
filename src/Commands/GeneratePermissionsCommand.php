@@ -15,11 +15,12 @@ use Filament\Resources\Pages\Page as ResourcePage;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Str;
 
 class GeneratePermissionsCommand extends Command
 {
-    public $signature = 'tameng:generate {--panel= : Generate permissions only for the given panel id} {--force : Overwrite existing policy files}';
+    public $signature = 'tameng:generate {--panel= : Generate permissions only for the given panel id} {--force : Overwrite existing policy files} {--with-ownership : Enable ownership enforcement in generated policies}';
 
     public $description = 'Generate permissions and policies for the entities registered in your Filament panels';
 
@@ -31,6 +32,10 @@ class GeneratePermissionsCommand extends Command
         $methods = (array) config('tameng.policies.methods', []);
         $generatePermissions = (bool) config('tameng.permission.generate', true);
         $customPermissions = (array) config('tameng.custom_permissions', []);
+
+        if ($this->option('with-ownership')) {
+            config(['tameng.policies.ownership.enabled' => true]);
+        }
 
         if ($generatePermissions) {
             $this->validateSeparatorCase($separator, $case);
@@ -77,13 +82,13 @@ class GeneratePermissionsCommand extends Command
                     continue;
                 }
 
-                if ($this->writePolicy($resource, $separator, $case, $methods, $files, $userModel)) {
+                if ($this->writePolicy($resource, $separator, $case, $methods, $files, $userModel, $panel->getId())) {
                     $policiesWritten++;
                 }
             }
 
             if (config('tameng.register_role_policy', true)) {
-                $this->writeRolePolicy($separator, $case, $methods, $files, $userModel);
+                $this->writeRolePolicy($separator, $case, $methods, $files, $userModel, $panel->getId());
             }
         }
 
@@ -98,7 +103,7 @@ class GeneratePermissionsCommand extends Command
     protected function validateSeparatorCase(string $separator, string $case): void
     {
         $conflicts = [
-            '_' => ['snake', 'lower_snake', 'upper_snake'],
+            '_' => ['upper_snake'],
             '-' => ['kebab'],
         ];
 
@@ -126,6 +131,8 @@ class GeneratePermissionsCommand extends Command
     {
         $subject = (string) config('tameng.resources.subject', 'model');
         $exclude = array_map('strval', (array) config('tameng.resources.exclude', []));
+        $scopedToPanel = (bool) config('tameng.permission.scoped_to_panel', false);
+        $panelId = $panel->getId();
 
         $created = 0;
 
@@ -138,6 +145,7 @@ class GeneratePermissionsCommand extends Command
 
             foreach ($methods as $action) {
                 $permission = PermissionHelper::permissionName($entity, $action, $separator, $case);
+                $permission = $scopedToPanel ? "{$panelId}_{$permission}" : $permission;
                 $permissionModel::findOrCreate($permission, $guard);
                 $created++;
             }
@@ -150,6 +158,8 @@ class GeneratePermissionsCommand extends Command
     {
         $subject = (string) config('tameng.pages.subject', 'class');
         $exclude = array_map('strval', (array) config('tameng.pages.exclude', []));
+        $scopedToPanel = (bool) config('tameng.permission.scoped_to_panel', false);
+        $panelId = $panel->getId();
 
         $created = 0;
 
@@ -162,7 +172,9 @@ class GeneratePermissionsCommand extends Command
                 continue;
             }
 
-            $permissionModel::findOrCreate(PermissionHelper::permissionName(PermissionHelper::entityName($page, $subject), 'view', $separator, $case), $guard);
+            $permission = PermissionHelper::permissionName(PermissionHelper::entityName($page, $subject), 'view', $separator, $case);
+            $permission = $scopedToPanel ? "{$panelId}_{$permission}" : $permission;
+            $permissionModel::findOrCreate($permission, $guard);
             $created++;
         }
 
@@ -173,6 +185,8 @@ class GeneratePermissionsCommand extends Command
     {
         $subject = (string) config('tameng.widgets.subject', 'class');
         $exclude = array_map('strval', (array) config('tameng.widgets.exclude', []));
+        $scopedToPanel = (bool) config('tameng.permission.scoped_to_panel', false);
+        $panelId = $panel->getId();
 
         $created = 0;
 
@@ -183,14 +197,16 @@ class GeneratePermissionsCommand extends Command
                 continue;
             }
 
-            $permissionModel::findOrCreate(PermissionHelper::permissionName(PermissionHelper::entityName($class, $subject), 'view', $separator, $case), $guard);
+            $permission = PermissionHelper::permissionName(PermissionHelper::entityName($class, $subject), 'view', $separator, $case);
+            $permission = $scopedToPanel ? "{$panelId}_{$permission}" : $permission;
+            $permissionModel::findOrCreate($permission, $guard);
             $created++;
         }
 
         return $created;
     }
 
-    protected function writePolicy(string $resource, string $separator, string $case, array $methods, Filesystem $files, ?string $userModel = null): bool
+    protected function writePolicy(string $resource, string $separator, string $case, array $methods, Filesystem $files, ?string $userModel = null, ?string $panelId = null): bool
     {
         $entity = PermissionHelper::entityName($resource, (string) config('tameng.resources.subject', 'model'));
         $className = Str::studly($entity) . 'Policy';
@@ -205,26 +221,69 @@ class GeneratePermissionsCommand extends Command
         $namespace = rtrim((string) config('tameng.policies.namespace', 'App\\Policies'), '\\');
         $singleParamMethods = (array) config('tameng.policies.single_parameter_methods', []);
         $resourceModel = PermissionHelper::resolveModelClass($resource);
+        $scopedToPanel = (bool) config('tameng.permission.scoped_to_panel', false);
 
         $userType = ($userModel !== null && class_exists($userModel)) ? class_basename($userModel) : null;
         $modelType = ($resourceModel !== null && class_exists($resourceModel)) ? class_basename($resourceModel) : null;
 
+        $ownershipEnabled = (bool) config('tameng.policies.ownership.enabled', false);
+        $foreignKey = (string) config('tameng.policies.ownership.foreign_key', 'user_id');
+        $hasResolver = config('tameng.policies.ownership.resolver') !== null;
+        $hasBefore = config('tameng.policies.before') !== null;
+        $hasAfter = config('tameng.policies.after') !== null;
+
         $methodsContent = collect($methods)
-            ->map(function (string $action) use ($entity, $separator, $case, $singleParamMethods, $userType, $modelType): string {
+            ->map(function (string $action) use ($entity, $separator, $case, $singleParamMethods, $userType, $modelType, $ownershipEnabled, $foreignKey, $hasResolver, $scopedToPanel, $panelId, $hasBefore, $hasAfter): string {
                 $method = Str::camel($action);
-                $permission = addslashes(PermissionHelper::permissionName($entity, $action, $separator, $case));
+                $permission = PermissionHelper::permissionName($entity, $action, $separator, $case);
+                $permission = $scopedToPanel && $panelId !== null ? "{$panelId}_{$permission}" : $permission;
+                $permission = addslashes($permission);
                 $isSingleParam = in_array($action, $singleParamMethods, true);
 
                 $userParam = $userType !== null ? "{$userType} \$user" : '$user';
                 $modelParam = $modelType !== null ? "{$modelType} \$model" : '$model';
                 $param = $isSingleParam ? $userParam : "{$userParam}, {$modelParam}";
 
+                $body = '';
+
+                if ($hasBefore) {
+                    $modelArg = $isSingleParam ? 'null' : '$model';
+                    $body .= "        \$before = call_user_func(config('tameng.policies.before'), \$user, '{$action}', {$modelArg});\n";
+                    $body .= "        if (\$before !== null) {\n";
+                    $body .= "            return \$before;\n";
+                    $body .= "        }\n\n";
+                }
+
+                if ($ownershipEnabled && ! $isSingleParam) {
+                    $body .= "        if (! \$user->can('{$permission}')) {\n";
+                    $body .= "            return false;\n";
+                    $body .= "        }\n\n";
+
+                    if ($hasResolver) {
+                        $body .= $hasAfter
+                            ? "        \$result = call_user_func(config('tameng.policies.ownership.resolver'), \$model, \$user);\n"
+                            : "        return call_user_func(config('tameng.policies.ownership.resolver'), \$model, \$user);\n";
+                    } else {
+                        $body .= $hasAfter
+                            ? "        \$result = \$model->{$foreignKey} === \$user->id;\n"
+                            : "        return \$model->{$foreignKey} === \$user->id;\n";
+                    }
+                } else {
+                    $body .= $hasAfter
+                        ? "        \$result = \$user->can('{$permission}');\n"
+                        : "        return \$user->can('{$permission}');\n";
+                }
+
+                if ($hasAfter) {
+                    $modelArg = $isSingleParam ? 'null' : '$model';
+                    $body .= "\n        return call_user_func(config('tameng.policies.after'), \$user, '{$action}', {$modelArg}, \$result);\n";
+                }
+
                 return <<<PHP
-                        public function {$method}({$param}): bool
-                        {
-                            return \$user->can('{$permission}');
-                        }
-                PHP;
+    public function {$method}({$param}): bool
+    {
+{$body}    }
+PHP;
             })
             ->implode("\n\n");
 
@@ -244,7 +303,7 @@ class GeneratePermissionsCommand extends Command
         return true;
     }
 
-    protected function writeRolePolicy(string $separator, string $case, array $methods, Filesystem $files, ?string $userModel = null): void
+    protected function writeRolePolicy(string $separator, string $case, array $methods, Filesystem $files, ?string $userModel = null, ?string $panelId = null): void
     {
         $className = 'RolePolicy';
         $path = config('tameng.policies.path', app_path('Policies')) . '/' . $className . '.php';
@@ -259,26 +318,69 @@ class GeneratePermissionsCommand extends Command
         $singleParamMethods = (array) config('tameng.policies.single_parameter_methods', []);
         $entity = 'role';
         $roleModel = ModelHelper::roleModelClass();
+        $scopedToPanel = (bool) config('tameng.permission.scoped_to_panel', false);
 
         $userType = ($userModel !== null && class_exists($userModel)) ? class_basename($userModel) : null;
         $modelType = class_exists($roleModel) ? class_basename($roleModel) : null;
 
+        $ownershipEnabled = (bool) config('tameng.policies.ownership.enabled', false);
+        $foreignKey = (string) config('tameng.policies.ownership.foreign_key', 'user_id');
+        $hasResolver = config('tameng.policies.ownership.resolver') !== null;
+        $hasBefore = config('tameng.policies.before') !== null;
+        $hasAfter = config('tameng.policies.after') !== null;
+
         $methodsContent = collect($methods)
-            ->map(function (string $action) use ($entity, $separator, $case, $singleParamMethods, $userType, $modelType): string {
+            ->map(function (string $action) use ($entity, $separator, $case, $singleParamMethods, $userType, $modelType, $ownershipEnabled, $foreignKey, $hasResolver, $scopedToPanel, $panelId, $hasBefore, $hasAfter): string {
                 $method = Str::camel($action);
-                $permission = addslashes(PermissionHelper::permissionName($entity, $action, $separator, $case));
+                $permission = PermissionHelper::permissionName($entity, $action, $separator, $case);
+                $permission = $scopedToPanel && $panelId !== null ? "{$panelId}_{$permission}" : $permission;
+                $permission = addslashes($permission);
                 $isSingleParam = in_array($action, $singleParamMethods, true);
 
                 $userParam = $userType !== null ? "{$userType} \$user" : '$user';
                 $modelParam = $modelType !== null ? "{$modelType} \$model" : '$model';
                 $param = $isSingleParam ? $userParam : "{$userParam}, {$modelParam}";
 
+                $body = '';
+
+                if ($hasBefore) {
+                    $modelArg = $isSingleParam ? 'null' : '$model';
+                    $body .= "        \$before = call_user_func(config('tameng.policies.before'), \$user, '{$action}', {$modelArg});\n";
+                    $body .= "        if (\$before !== null) {\n";
+                    $body .= "            return \$before;\n";
+                    $body .= "        }\n\n";
+                }
+
+                if ($ownershipEnabled && ! $isSingleParam) {
+                    $body .= "        if (! \$user->can('{$permission}')) {\n";
+                    $body .= "            return false;\n";
+                    $body .= "        }\n\n";
+
+                    if ($hasResolver) {
+                        $body .= $hasAfter
+                            ? "        \$result = call_user_func(config('tameng.policies.ownership.resolver'), \$model, \$user);\n"
+                            : "        return call_user_func(config('tameng.policies.ownership.resolver'), \$model, \$user);\n";
+                    } else {
+                        $body .= $hasAfter
+                            ? "        \$result = \$model->{$foreignKey} === \$user->id;\n"
+                            : "        return \$model->{$foreignKey} === \$user->id;\n";
+                    }
+                } else {
+                    $body .= $hasAfter
+                        ? "        \$result = \$user->can('{$permission}');\n"
+                        : "        return \$user->can('{$permission}');\n";
+                }
+
+                if ($hasAfter) {
+                    $modelArg = $isSingleParam ? 'null' : '$model';
+                    $body .= "\n        return call_user_func(config('tameng.policies.after'), \$user, '{$action}', {$modelArg}, \$result);\n";
+                }
+
                 return <<<PHP
-                        public function {$method}({$param}): bool
-                        {
-                            return \$user->can('{$permission}');
-                        }
-                PHP;
+    public function {$method}({$param}): bool
+    {
+{$body}    }
+PHP;
             })
             ->implode("\n\n");
 
@@ -312,18 +414,21 @@ class GeneratePermissionsCommand extends Command
 
     protected function buildImports(string $policyNamespace, array $modelClasses): string
     {
-        if ($modelClasses === []) {
-            return '';
-        }
-
         $policyNamespace = rtrim($policyNamespace, '\\');
 
-        return collect($modelClasses)
+        $baseUserClass = User::class;
+
+        $imports = collect($modelClasses)
             ->filter(fn (?string $class): bool => $class !== null && class_exists($class))
             ->filter(fn (string $class): bool => (string) Str::beforeLast($class, '\\') !== $policyNamespace)
-            ->unique()
-            ->map(fn (string $class): string => "use {$class};")
-            ->implode("\n");
+            ->unique();
+
+        $hasUserImport = $imports->contains(fn (string $class): bool => class_basename($class) === 'User');
+        if (! $hasUserImport) {
+            $imports->prepend($baseUserClass);
+        }
+
+        return $imports->map(fn (string $class): string => "use {$class};")->implode("\n");
     }
 
     protected function policyStubPath(): string

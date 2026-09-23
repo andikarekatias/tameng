@@ -26,6 +26,8 @@ return [
         'case' => 'snake',
         'generate' => true,
         'name_max_length' => 255,
+        'scoped_to_panel' => false,
+        'enforce_page_permissions' => true,
     ],
 
     'custom_permissions' => [],
@@ -33,6 +35,7 @@ return [
     'resources' => [
         'subject' => 'model',
         'exclude' => [],
+        'generate_can_view_any' => false,
     ],
 
     'pages' => [
@@ -72,6 +75,13 @@ return [
             'restore_any',
             'force_delete_any',
         ],
+        'ownership' => [
+            'enabled' => true,
+            'foreign_key' => 'user_id',
+            'resolver' => null,
+        ],
+        'before' => null,
+        'after' => null,
     ],
 
     'register_role_policy' => true,

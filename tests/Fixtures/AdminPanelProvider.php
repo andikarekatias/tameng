@@ -15,6 +15,7 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->default()
             ->resources([UserResource::class])
+            ->pages([MediaLibraryPage::class])
             ->plugin(TamengPlugin::make());
     }
 }
