@@ -1,7 +1,6 @@
 <?php
 
 use Andika\Tameng\TamengPlugin;
-use Filament\Panel;
 use Filament\Support\Icons\Heroicon;
 
 it('registers plugin with default configuration', function () {

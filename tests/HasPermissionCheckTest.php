@@ -15,7 +15,7 @@ it('returns false when user is not authenticated', function () {
 });
 
 it('checks can view any permission on authenticated user', function () {
-    $user = new User();
+    $user = new User;
     $this->actingAs($user);
 
     expect(DummyResource::canViewAny())->toBeFalse();

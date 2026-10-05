@@ -8,7 +8,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 it('skips non-page routes', function () {
-    $middleware = new EnsurePagePermission();
+    $middleware = new EnsurePagePermission;
 
     $request = Request::create('/test', 'GET');
     $route = new Route('GET', '/test', ['uses' => 'SomeController@index']);
@@ -20,7 +20,7 @@ it('skips non-page routes', function () {
 });
 
 it('aborts when user lacks permission for standalone page', function () {
-    $middleware = new EnsurePagePermission();
+    $middleware = new EnsurePagePermission;
 
     $request = Request::create('/admin/media-library', 'GET');
     $route = new Route('GET', '/admin/media-library', ['uses' => MediaLibraryPage::class]);
