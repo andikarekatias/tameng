@@ -420,8 +420,8 @@ class RoleResource extends Resource
         return PermissionHelper::permissionName($entity, $action, $separator, $case, $panelId);
     }
 
-    public static function permissionLabel(string $name): string
+    public static function permissionLabel(string $name, ?string $panelId = null): string
     {
-        return PermissionHelper::permissionLabel($name);
+        return PermissionHelper::permissionLabel($name, $panelId);
     }
 }

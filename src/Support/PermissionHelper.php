@@ -81,7 +81,7 @@ final class PermissionHelper
         return null;
     }
 
-    public static function permissionLabel(string $name): string
+    public static function permissionLabel(string $name, ?string $panelId = null): string
     {
         if (config('tameng.localization.enabled')) {
             $key = (string) config('tameng.localization.key') . '.' . $name;
@@ -93,9 +93,30 @@ final class PermissionHelper
         }
 
         if ((bool) config('tameng.permission.scoped_to_panel', false)) {
-            $panelId = Filament::getCurrentPanel()?->getId();
+            $panelId ??= Filament::getCurrentPanel()?->getId();
+
+            if ($panelId === null) {
+                try {
+                    $panelId = Filament::getCurrentOrDefaultPanel()?->getId();
+                } catch (\Throwable) {
+                    $panelId = null;
+                }
+            }
+
             if ($panelId !== null && str_starts_with($name, "{$panelId}_")) {
                 $name = substr($name, strlen($panelId) + 1);
+            } else {
+                try {
+                    foreach (array_keys(Filament::getPanels()) as $id) {
+                        if (str_starts_with($name, "{$id}_")) {
+                            $name = substr($name, strlen($id) + 1);
+
+                            break;
+                        }
+                    }
+                } catch (\Throwable) {
+                    //
+                }
             }
         }
 
