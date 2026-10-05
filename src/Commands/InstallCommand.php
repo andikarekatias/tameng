@@ -89,8 +89,8 @@ class InstallCommand extends Command
         $this->info('Next Steps:');
         $this->comment('  1. php artisan tameng:generate');
         $this->comment('     Generate permissions for your Filament panels');
-        $this->comment('  2. php artisan tameng:super-admin user@email.com');
-        $this->comment('     Assign super admin to a user');
+        $this->comment('  2. php artisan tameng:super-admin');
+        $this->comment('     Assign super admin to a user (interactive)');
         $this->comment('  3. php artisan permission:cache-reset');
         $this->comment('     Clear permission cache');
         $this->newLine();

@@ -5,6 +5,24 @@ All notable changes to `andika/tameng` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] — 2026-10-05
+
+### Fixed
+
+- Fixed permission counter accumulation bug in `tameng:generate` (previously only counted custom permissions, discarding resource/page/widget totals).
+- Fixed multi-panel scoping (`scoped_to_panel`) support across the entire plugin:
+  - `PermissionHelper::permissionName()` now resolves and prefixes `$panelId` when `scoped_to_panel` is enabled.
+  - `PermissionHelper::permissionLabel()` strips panel prefixes for clean, legible labels on permission cards.
+  - `EnsurePagePermission` middleware and `HasPermissionCheck` trait now properly respect panel-scoped permissions.
+  - `tameng:check` now accounts for panel scoping and scopes permission existence checks per guard.
+- Fixed `tameng:super-admin` command suggestion in `tameng:install` next steps to match interactive/flag usage.
+
+### Improved
+
+- Overhauled `tameng:sync` to synchronize pages, widgets, custom permissions, and role policies in addition to resources.
+- Added policy lifecycle hooks (`before`/`after`) and panel-scoped permission handling to `tameng:sync` generated policies.
+- Added comprehensive Pest test suite covering `PermissionHelper`, `TamengPlugin`, `HasPermissionCheck`, and `EnsurePagePermission`.
+
 ## [1.3.0] — 2026-09-23
 
 ### Added

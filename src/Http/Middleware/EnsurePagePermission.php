@@ -6,6 +6,7 @@ namespace Andika\Tameng\Http\Middleware;
 
 use Andika\Tameng\Support\PermissionHelper;
 use Closure;
+use Filament\Facades\Filament;
 use Filament\Pages\Dashboard;
 use Filament\Pages\Page;
 use Filament\Resources\Pages\Page as ResourcePage;
@@ -36,11 +37,14 @@ class EnsurePagePermission
                 return $next($request);
             }
 
+            $panelId = Filament::getCurrentPanel()?->getId();
+
             $permission = PermissionHelper::permissionName(
                 PermissionHelper::entityName($pageClass, 'class'),
                 'view',
                 (string) config('tameng.permission.separator', '_'),
                 (string) config('tameng.permission.case', 'snake'),
+                $panelId,
             );
 
             if (! Gate::allows($permission)) {

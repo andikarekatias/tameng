@@ -65,9 +65,9 @@ class GeneratePermissionsCommand extends Command
             $userModel = $this->resolveUserModel($guard);
 
             if ($generatePermissions) {
-                $this->generateResourcePermissions($panel, $permissionModel, $separator, $case, $methods, $guard);
-                $this->generatePagePermissions($panel, $permissionModel, $separator, $case, $guard);
-                $this->generateWidgetPermissions($panel, $permissionModel, $separator, $case, $guard);
+                $permissionsCreated += $this->generateResourcePermissions($panel, $permissionModel, $separator, $case, $methods, $guard);
+                $permissionsCreated += $this->generatePagePermissions($panel, $permissionModel, $separator, $case, $guard);
+                $permissionsCreated += $this->generateWidgetPermissions($panel, $permissionModel, $separator, $case, $guard);
             }
 
             foreach ($customPermissions as $permission) {

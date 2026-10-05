@@ -29,9 +29,7 @@ class CheckPermissionsCommand extends Command
         $checked = 0;
 
         $panels = $this->panels();
-
         $permissionModel = ModelHelper::permissionModelClass();
-        $definedPermissions = $permissionModel::pluck('name')->toArray();
 
         foreach ($panels as $panel) {
             if (! TamengPlugin::forPanel($panel)->shouldDiscoverEntities()) {
@@ -39,6 +37,8 @@ class CheckPermissionsCommand extends Command
             }
 
             $guard = $panel->getAuthGuard();
+            $panelId = $panel->getId();
+            $definedPermissions = $permissionModel::where('guard_name', $guard)->pluck('name')->toArray();
 
             $exclude = array_map('strval', (array) config('tameng.resources.exclude', []));
 
@@ -50,7 +50,7 @@ class CheckPermissionsCommand extends Command
                 $entity = PermissionHelper::entityName($resource, $subject);
 
                 foreach ($methods as $action) {
-                    $expectedPermission = PermissionHelper::permissionName($entity, $action, $separator, $case);
+                    $expectedPermission = PermissionHelper::permissionName($entity, $action, $separator, $case, $panelId);
                     $checked++;
 
                     if (! in_array($expectedPermission, $definedPermissions, true)) {
@@ -72,7 +72,7 @@ class CheckPermissionsCommand extends Command
                 }
 
                 $entity = PermissionHelper::entityName($page, $pageSubject);
-                $expectedPermission = PermissionHelper::permissionName($entity, 'view', $separator, $case);
+                $expectedPermission = PermissionHelper::permissionName($entity, 'view', $separator, $case, $panelId);
                 $checked++;
 
                 if (! in_array($expectedPermission, $definedPermissions, true)) {
@@ -91,11 +91,20 @@ class CheckPermissionsCommand extends Command
                 }
 
                 $entity = PermissionHelper::entityName($class, $widgetSubject);
-                $expectedPermission = PermissionHelper::permissionName($entity, 'view', $separator, $case);
+                $expectedPermission = PermissionHelper::permissionName($entity, 'view', $separator, $case, $panelId);
                 $checked++;
 
                 if (! in_array($expectedPermission, $definedPermissions, true)) {
                     $issues[] = "{$class} expects permission \"{$expectedPermission}\" — not defined";
+                }
+            }
+
+            $customPermissions = (array) config('tameng.custom_permissions', []);
+            foreach ($customPermissions as $customPermission) {
+                $checked++;
+
+                if (! in_array($customPermission, $definedPermissions, true)) {
+                    $issues[] = "Custom permission \"{$customPermission}\" (guard: {$guard}) — not defined";
                 }
             }
         }

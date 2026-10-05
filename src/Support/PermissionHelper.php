@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Andika\Tameng\Support;
 
+use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -34,12 +35,22 @@ final class PermissionHelper
         return $name;
     }
 
-    public static function permissionName(string $entity, string $action, string $separator, string $case): string
+    public static function permissionName(string $entity, string $action, string $separator, string $case, ?string $panelId = null): string
     {
         $entitySegment = self::formatSegment($entity, $case);
         $actionSegment = self::formatSegment($action, $case);
 
-        return "{$entitySegment}{$separator}{$actionSegment}";
+        $name = "{$entitySegment}{$separator}{$actionSegment}";
+
+        if ((bool) config('tameng.permission.scoped_to_panel', false)) {
+            $panelId ??= Filament::getCurrentPanel()?->getId();
+
+            if ($panelId !== null && ! str_starts_with($name, "{$panelId}_")) {
+                return "{$panelId}_{$name}";
+            }
+        }
+
+        return $name;
     }
 
     public static function formatSegment(string $value, string $case): string
@@ -78,6 +89,13 @@ final class PermissionHelper
 
             if ($label !== $key) {
                 return $label;
+            }
+        }
+
+        if ((bool) config('tameng.permission.scoped_to_panel', false)) {
+            $panelId = Filament::getCurrentPanel()?->getId();
+            if ($panelId !== null && str_starts_with($name, "{$panelId}_")) {
+                $name = substr($name, strlen($panelId) + 1);
             }
         }
 
